@@ -1,48 +1,47 @@
-const express = require("express");
-const http = require("http");
-const socketIo = require("socket.io");
-const path = require("path");
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = new Server(server);
 
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static('public'));
 
-let users = {}; // { username: socketId }
+io.on('connection', (socket) => {
+  console.log('User connected');
 
-io.on("connection", (socket) => {
-  console.log("New connection:", socket.id);
-
-  // Set username only when login button is clicked
-  socket.on("setUsername", (username) => {
-    if (!username) return;
-
+  // Set username
+  socket.on('setUsername', (username) => {
     socket.username = username;
-    users[username] = socket.id;
-
-    io.emit("onlineUsers", Object.keys(users)); // update everyone
+    io.emit(
+      'onlineUsers',
+      Array.from(io.sockets.sockets.values())
+        .map((s) => s.username)
+        .filter(Boolean)
+    );
   });
 
-  // Private message
-  socket.on("privateMessage", ({ to, message }) => {
-    const toSocket = users[to];
-    if (toSocket) {
-      io.to(toSocket).emit("receiveMessage", {
-        from: socket.username,
-        message,
-      });
+  // Private messages
+  socket.on('privateMessage', ({ to, message }) => {
+    for (let [id, s] of io.sockets.sockets) {
+      if (s.username === to) {
+        s.emit('receiveMessage', { from: socket.username, message });
+        break;
+      }
     }
   });
 
-  // Disconnect
-  socket.on("disconnect", () => {
-    if (socket.username) {
-      delete users[socket.username];
-      io.emit("onlineUsers", Object.keys(users));
-    }
-    console.log("Disconnected:", socket.id);
+  socket.on('disconnect', () => {
+    io.emit(
+      'onlineUsers',
+      Array.from(io.sockets.sockets.values())
+        .map((s) => s.username)
+        .filter(Boolean)
+    );
   });
 });
 
-server.listen(3000, () => console.log("Server running on http://localhost:3000"));
+server.listen(process.env.PORT || 3000, () => {
+  console.log('Server running...');
+});
