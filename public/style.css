@@ -1,12 +1,8 @@
 body { margin:0; font-family: 'Poppins', sans-serif; background:#f0f2f5; color:#333; }
-
-/* Login */
 .login-container { width:380px; margin:150px auto; text-align:center; background:#fff; padding:40px; border-radius:15px; box-shadow:0 8px 20px rgba(0,0,0,0.15); }
 .login-container input { width:85%; padding:12px; margin:15px 0; border-radius:10px; border:1px solid #ccc; font-size:16px; }
 .login-container button { padding:12px 30px; border:none; background:#007bff; color:#fff; border-radius:10px; cursor:pointer; font-weight:bold; transition:0.3s; }
 .login-container button:hover { background:#0056b3; }
-
-/* Chat Layout */
 .chat-container { display:flex; height:100vh; background:#f0f2f5; }
 .sidebar { width:28%; background:#fff; border-right:1px solid #ddd; padding:20px; overflow-y:auto; }
 .user-greeting { font-weight:bold; font-size:18px; margin-bottom:15px; color:#007bff; text-align:center; }
