@@ -1,92 +1,64 @@
 const socket = io();
-let username = null;
-let selectedUser = null;
-let chatHistory = {};
 
-// Login only on button click
-function login() {
-  const input = document.getElementById("usernameInput");
-  const name = input.value.trim();
+let currentUser = '';
+let currentChatUser = '';
 
-  if (!name) {
-    alert("Please enter your name");
-    return;
+const loginContainer = document.getElementById('loginContainer');
+const chatContainer = document.getElementById('chatContainer');
+const usernameInput = document.getElementById('usernameInput');
+const loginBtn = document.getElementById('loginBtn');
+const greeting = document.getElementById('greeting');
+const usersList = document.getElementById('usersList');
+const chatHeader = document.getElementById('chatHeader');
+const messagesDiv = document.getElementById('messages');
+const messageInput = document.getElementById('messageInput');
+const sendBtn = document.getElementById('sendBtn');
+
+loginBtn.addEventListener('click', () => {
+  const username = usernameInput.value.trim();
+  if (!username) return;
+  currentUser = username;
+  socket.emit('setUsername', username);
+  greeting.innerText = `Hi, ${username}`;
+  loginContainer.style.display = 'none';
+  chatContainer.style.display = 'flex';
+});
+
+socket.on('onlineUsers', (users) => {
+  usersList.innerHTML = '';
+  users.filter(u => u !== currentUser).forEach(u => {
+    const div = document.createElement('div');
+    div.innerText = u;
+    div.classList.toggle('active', currentChatUser === u);
+    div.addEventListener('click', () => {
+      currentChatUser = u;
+      chatHeader.innerText = `Chat with ${u}`;
+      document.querySelectorAll('.sidebar div').forEach(d => d.classList.remove('active'));
+      div.classList.add('active');
+      messagesDiv.innerHTML = ''; // clear chat
+    });
+    usersList.appendChild(div);
+  });
+});
+
+sendBtn.addEventListener('click', () => {
+  const msg = messageInput.value.trim();
+  if (!msg || !currentChatUser) return;
+  addMessage(currentUser, msg, 'sent');
+  socket.emit('privateMessage', { to: currentChatUser, message: msg });
+  messageInput.value = '';
+});
+
+socket.on('receiveMessage', ({ from, message }) => {
+  if (from === currentChatUser) {
+    addMessage(from, message, 'received');
   }
-
-  username = name;
-
-  // emit username only after login
-  socket.emit("setUsername", username);
-
-  // hide login screen and show chat
-  document.getElementById("loginScreen").style.display = "none";
-  document.getElementById("chatScreen").style.display = "flex";
-
-  // Show greeting on sidebar
-  document.getElementById("userGreeting").innerText = "Hi, " + username;
-}
-
-// Update online users dynamically
-socket.on("onlineUsers", (users) => {
-  const list = document.getElementById("onlineUsers");
-  list.innerHTML = "";
-
-  users.forEach(user => {
-    if (user !== username) {
-      const div = document.createElement("div");
-      div.textContent = user;
-      div.onclick = () => selectUser(user, div);
-      list.appendChild(div);
-
-      if (!chatHistory[user]) chatHistory[user] = [];
-    }
-  });
 });
 
-// Select user
-function selectUser(user, divElement) {
-  selectedUser = user;
-  document.getElementById("chatHeader").innerText = "Chat with " + user;
-
-  // highlight active user
-  document.querySelectorAll('.sidebar div').forEach(d => d.classList.remove('active'));
-  divElement.classList.add('active');
-
-  renderMessages(user);
-}
-
-// Send message
-function sendMessage() {
-  if (!selectedUser) return;
-
-  const msgInput = document.getElementById("messageInput");
-  const msg = msgInput.value.trim();
-  if (!msg) return;
-
-  chatHistory[selectedUser].push({ message: msg, type: "sent" });
-  renderMessages(selectedUser);
-
-  socket.emit("privateMessage", { to: selectedUser, message: msg });
-  msgInput.value = "";
-}
-
-// Receive message
-socket.on("receiveMessage", ({ from, message }) => {
-  if (!chatHistory[from]) chatHistory[from] = [];
-  chatHistory[from].push({ message, type: "received" });
-
-  if (selectedUser === from) renderMessages(from);
-});
-
-// Render messages
-function renderMessages(user) {
-  const messagesDiv = document.getElementById("messages");
-  messagesDiv.innerHTML = "";
-  chatHistory[user].forEach(msg => {
-    const div = document.createElement("div");
-    div.classList.add(msg.type);
-    div.textContent = msg.type === "sent" ? "You: " + msg.message : user + ": " + msg.message;
-    messagesDiv.appendChild(div);
-  });
+function addMessage(sender, text, type) {
+  const div = document.createElement('div');
+  div.classList.add(type);
+  div.innerText = text;
+  messagesDiv.appendChild(div);
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
